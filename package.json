@@ -1,6 +1,6 @@
 {
   "name": "rethinkdb-ws-server",
-  "version": "0.7.0",
+  "version": "0.1.0",
   "description": "WebSocket server that proxies to a RethinkDB instance. Supports query validation and minor manipulation.",
   "author": "Rohit Hazra",
   "license": "MIT",
