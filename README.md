@@ -7,6 +7,10 @@ This is a fork from [mikemintz/rethinkdb-websocket-server](https://github.com/mi
 In the original repo there is no option to manipulate data/query in the backend. So I added an option to use session data in the query. This data DOES NOT need to be sent from the frontend client.
 
 For the code to work you must create a session.
+### Install:
+```bash
+npm install --save rethinkdb-ws-client
+```
 
 ### Example: 
 Create a session that will populate the session with our special id(s)
