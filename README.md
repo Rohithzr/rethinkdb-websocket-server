@@ -49,6 +49,7 @@ r.table('trades')
     });
 ```
 #### Client:
+Compatible Client: [mikemintz/rethinkdb-websocket-client]https://github.com/mikemintz/rethinkdb-websocket-client
 now you can execute the following query from your client.
 ```js
 let query = r.table('trades').orderBy({index: r.desc("created_at")})
