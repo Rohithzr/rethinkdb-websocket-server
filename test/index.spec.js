@@ -58,7 +58,6 @@ function setupInstances({
   });
 }
 
-
 describe('RethinkdbWebsocketServer', () => {
   it('should blindly process simple queries with unsafelyAllowAnyQuery', done => {
     const opts = {
@@ -67,7 +66,9 @@ describe('RethinkdbWebsocketServer', () => {
     setupInstances(opts).then(({conn, cleanup}) => {
       const r = WsClient.rethinkdb;
       const turtles = [{id: '1'}, {id: '2'}];
-      r.dbCreate('test').run(conn).then(() => (
+      r.dbDrop('test').run(conn).then(() => (
+        r.dbCreate('test').run(conn)
+      )).then(() => (
         r.tableCreate('turtles').run(conn)
       )).then(() => (
         r.table('turtles').insert(turtles).run(conn)

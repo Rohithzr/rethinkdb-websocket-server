@@ -1,10 +1,90 @@
-[![npm version](https://img.shields.io/npm/v/rethinkdb-websocket-server.svg)](https://www.npmjs.com/package/rethinkdb-websocket-server)
-[![Travis](https://img.shields.io/travis/mikemintz/rethinkdb-websocket-server.svg)](https://travis-ci.org/mikemintz/rethinkdb-websocket-server)
+[![npm version](https://img.shields.io/npm/v/rethinkdb-ws-server.svg)](https://www.npmjs.com/package/rethinkdb-ws-server)
+[![Travis](https://travis-ci.org/Rohithzr/rethinkdb-websocket-server.svg?branch=master)](https://travis-ci.org/Rohithzr/rethinkdb-websocket-server)
+
+# rethinkdb-ws-server
+This is a fork from [mikemintz/rethinkdb-websocket-server](https://github.com/mikemintz/rethinkdb-websocket-server)
+
+In the original repo there is no option to manipulate data/query in the backend. So I added an option to use session data in query. This data DOES NOT need to be sent from the frontend client.
+
+For the code to work you must create a session.
+
+### Example: 
+Create a session that will populate the session with our special id(s)
+#### Server: 
+```js
+// create a session
+options.sessionCreator = function (urlQueryParams) {
+  // this you get from frontend as query param
+  let token = urlQueryParams.token;
+  if (!token || token == "") {
+    return Promise.reject('Invalid auth token');
+  } else {
+    // your custom session logic here
+    // I use a [teade](https://www.npmjs.com/package/teade) 
+    // RPC middleware to validate the token and get sessionId from MySQL
+    // ... RPC Code Here
+    return Promise.resolve(
+        {
+            sessionId: "string session id", //optional
+            sessionIdInt: parseInt("integer session id") // optional
+        }
+    );
+  }
+};
+```
+add a query to whitelist so that is passes validation
+```js
+//
+r.table('trades')
+    .orderBy({index: allowSpecificFieldOrderBy(RP, "created_at")})
+    .filter(r.row('type').eq(allowAnyString(RP)))
+    .filter({"userId": allowAnyString(RP)})
+    .changes({includeInitial: true}).opt("db", r.db("test"))
+    .validate(function (refs, session) {
+        return true;
+    });
+```
+#### Client:
+now you can execute the following query from your client.
+```js
+let query = r.table('trades').orderBy({index: r.desc("created_at")})
+    .filter(r.row('currency').eq(currencyName))
+    .filter({"userId": "$sessionId$"}) // can use "$sessionIdInt$" here
+    .changes({includeInitial: true});
+```
+
+Whenever your query data will match `$sessionId$` or `$sessionIdInt$` it will be replaced with a respective key from the session.
+
+Some helper functions I use.
+
+```js
+// helper function used
+function allowAnyString(RP){
+    return RP.check(function(actual, refs, session) {
+        return typeof actual === 'string' && actual.trim();
+    })
+}
+
+function allowBool(RP){
+    return RP.check(function(actual, refs, session) {
+        return typeof actual === 'boolean';
+    })
+}
+
+function allowSpecificFieldOrderBy(RP, allowedField){
+    return RP.check(function(actual, refs, session) {
+        return ((actual[0] == 73 || actual[0] == 74) && actual[1][0] == allowedField);
+    }) 
+}
+```
+
+#### Documentation from original library 
+[mikemintz/rethinkdb-websocket-server](https://github.com/mikemintz/rethinkdb-websocket-server)
 
 # rethinkdb-websocket-server
 
 Node.js WebSocket server that proxies to a RethinkDB instance. Supports query
-validation.
+validation and minor manipulations.
 
 ## What is this?
 
