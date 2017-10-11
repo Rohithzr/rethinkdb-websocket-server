@@ -129,9 +129,53 @@ export class Connection {
     const token = cmdBuf.readUInt32LE(0) + 0x100000000 * cmdBuf.readUInt32LE(4);
     const queryCmdBuf = cmdBuf.slice(12, cmdBuf.length);
     const logFn = this.log.bind(this);
-    const validatePromise = this.sessionPromise.then(session => (
-      this.queryValidator.validateQueryCmd(token, queryCmdBuf, session, logFn)
-    ));
+    // Previous code that is being replaced Start
+    // const validatePromise = this.sessionPromise.then(session => (
+    //   this.queryValidator.validateQueryCmd(token, queryCmdBuf, session, logFn)
+    // ));
+    // Previous code that is being replaced End
+    // Modify the query before sending to RethinkDB Server
+    // This modification will allow us to use sessionId in string or integer form
+    // sessionId / sessionIdInt will need to be set while creating session
+    // using options.sessionCreator.
+    // see the following sessionCreator code
+    // options.sessionCreator = function (urlParams) {
+    //   if (!urlParams.token) {
+    //     return Promise.reject('Invalid auth token');
+    //   } else {
+    //     // your custom authentication code that will
+    //     // fetch the sessionId using the token
+    //     // this sessionId or sessionIdInt will be then used in the queries
+    //     // replacing "$sessionId$" and "$sessionIdInt$" respectively
+    //     return Promise.resolve({
+    //       sessionId: "a string session id", // optional
+    //       sessionIdInt: parseInt("an integer session id"), // optional
+    //     })
+    //   }
+    // };
+    const _this = this;
+    const validatePromise = this.sessionPromise.then(function(session) {
+      // decode the query
+      let rawQuery = queryCmdBuf.toString('utf8');
+      // find if the query requires $sessionId$ replacement
+      // and if session.sessionId exists
+      if (rawQuery.indexOf("$sessionId$") > 0 && session.sessionId) {
+        // replace the $sessionId with session.sessionId
+        rawQuery = rawQuery.replace("$sessionId$", session.sessionId);
+      }
+
+      // find if the query requires $sessionIdInt$ replacement
+      // and if session.sessionIdInt exists
+      if (rawQuery.indexOf("$sessionIdInt$") > 0 && session.sessionIdInt) {
+        // replace the $sessionId with session.sessionIdInt
+        rawQuery = rawQuery.replace("\"$sessionIdInt$\"", parseInt(session.sessionIdInt));
+      }
+      // re-convert query to Binary Buffer
+      let modifiedQueryCmdBuf = new Buffer(rawQuery.toString('binary'));
+      //forward the query for execution
+
+      return _this.queryValidator.validateQueryCmd(token, modifiedQueryCmdBuf, session, logFn);
+    });
     return validatePromise.then(allow => {
       if (allow) {
         this.dbSocket.write(cmdBuf, 'binary');

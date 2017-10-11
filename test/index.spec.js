@@ -5,10 +5,10 @@ import http from 'http';
 import reqlite from 'reqlite';
 import {Promise} from 'bluebird';
 import * as WsClient from 'rethinkdb-websocket-client/dist/node';
-import * as WsServer from '../';
+import * as WsServer from '../src';
 
-let nextDbPort = 28060;
-
+let nextDbPort = 28015;
+let host = 'localhost';
 function setupInstances({
   httpPath = '/',
   queryWhitelist = [],
@@ -16,7 +16,7 @@ function setupInstances({
   sessionCreator = undefined,
 }) {
   return new Promise(resolve => {
-    const dbPort = nextDbPort++; // TODO Ideally reqlite would let us pass 0 for next free port
+    const dbPort = nextDbPort; // TODO Ideally reqlite would let us pass 0 for next free port
     const httpServer = http.createServer();
 
     const reqliteOpts = {
@@ -38,7 +38,7 @@ function setupInstances({
     httpServer.on('listening', () => {
       const {port} = httpServer.address();
       const wsClientOpts = {
-        host: 'localhost',
+        host: host,
         port,
         path: httpPath,
         db: 'test',
@@ -74,7 +74,8 @@ describe('RethinkdbWebsocketServer', () => {
       )).then(() => (
         r.table('turtles').run(conn)
       )).then(results => {
-        assert.deepEqual(results, turtles);
+        let result = results._responses[0].r;
+        assert.deepEqual(result, turtles);
         cleanup();
         done();
       });
